@@ -10,6 +10,20 @@ class AlexaSkill(object):
       self.request = request
       self.context = context
 
+   # Request Format #
+   # https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/alexa-skills-kit-interface-reference#RequestFormat
+   def processRequest(self):
+      if self.session['new']:
+         self.onSessionStarted()
+      #if 'accessToken' not in self.session['user']:
+      #   return self.onNotLinked()
+      if self.request['type'] == 'LaunchRequest':
+         return self.onLaunch()
+      if self.request['type'] == 'IntentRequest':
+         return self.onIntent()
+      if self.request['type'] == 'SessionEndedRequest':
+         return self.onSessionEnded()
+   
    @abc.abstractmethod
    def onSessionStarted(self):
       pass
@@ -20,147 +34,57 @@ class AlexaSkill(object):
 
    def onIntent(self):
       intent = self.request['intent']['name']
-      return self.intents[intent]['handler']()
+      return self.intents[intent]['handler'](self.request['intent'])
 
    def onNotLinked(self):
       outputSpeech = {
          'type' : 'PlainText',
          'text' : "Please go to your Alexa app and link your account."
       }
-      
       card = {
          "type" : "LinkAccount"
       }
-
-      reprompt = {}
-
-      shouldEndSession = True
-      version = self.version
-      sessionAttributes = {}
-      response = self.__buildResponse(outputSpeech, card, reprompt, shouldEndSession)
-      return self.__buildFullResponse(version, sessionAttributes, response) 
+      response = self.__buildResponse(outputSpeech=outputSpeech, card=card, shouldEndSession=True)
+      return self.__buildFullResponse(version=self.version, response=response) 
        
    @abc.abstractmethod
    def onSessionEnded(self):
       pass
-
-   # Request Format #
-   # https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/alexa-skills-kit-interface-reference#RequestFormat
-   def processRequest(self):
-      if self.session['new']:
-         self.onSessionStarted()
-
-      if 'accessToken' not in self.session['user']:
-         return self.onNotLinked()
-
-      if self.request['type'] == 'LaunchRequest':
-         return self.onLaunch()
-      
-      if self.request['type'] == 'IntentRequest':
-         return self.onIntent()
-      
-      if self.request['type'] == 'SessionEndedRequest':
-         return self.onSessionEnded()
    
    # Response Format #
    # https://developer.amazon.com/public/solutions/alexa/alexa-skills-kit/docs/alexa-skills-kit-interface-reference#ResponseFormat
-   def __buildResponse(self, outputSpeech, card, reprompt, shouldEndSession):
-      return {
-         'outputSpeech' : outputSpeech,
-         'card' : card,
-         'reprompt' : reprompt,
-         'shouldEndSession' : shouldEndSession
-      }
+   def __buildResponse(self, **kwargs):
+      response = dict()
+      response['outputSpeech'] = kwargs.get('outputSpeech', None)
+      response['card'] = kwargs.get('card', None)
+      response['reprompt'] = kwargs.get('reprompt', None)
+      response['shouldEndSession'] = kwargs.get('shouldEndSession', None)
+      response['directives'] = kwargs.get('directives', None)
+      return response
 
-   def __buildFullResponse(self, version, sessionAttributes, response):
-      return {
-         'version' : version,
-         'sessionAttributes' : sessionAttributes,
-         'response' : response
-      }
+   def __buildFullResponse(self, **kwargs):
+      fullResponse = dict()
+      fullResponse['version'] = kwargs.get('version') # required
+      fullResponse['sessionAttributes'] = kwargs.get('sessionAttributes', None)
+      fullResponse['response'] = kwargs.get('response') # required
+      return fullResponse
 
-   def tell(self, version, sessionAttributes, outputSpeech):     
-      outputSpeech = {
-         'type' : 'PlainText',
-         'text' : 'Welcome to Connected Home. What would you like to do?'
-      }
+   # TODO: add sessionAttributes as optional arg
+   def tell(self, outputSpeech):
+      response = self.__buildResponse(outputSpeech=outputSpeech, shouldEndSession=True)
+      return self.__buildFullResponse(version=self.version, response=response)
 
-      card = {}
-
-      reprompt = {}
-
-      shouldEndSession = True
-        
-      response = self.__buildResponse(outputSpeech, card, reprompt, shouldEndSession)
-      
-      return self.__buildFullResponse(version, sessionAttributes, response)
-
-   def tellWithCard(self, version, sessionAttributes, outputSpeechText, cardTitle, cardText, cardImages): 
-      outputSpeech = {
-         'type' : 'PlainText',
-         'text' : outputSpeechText
-      }
-
-      card = {
-         'type' : 'Standard',
-         'title' : cardTitle,
-         'text' : cardText,
-         'image' : cardImages
-      }
-
-
-      reprompt = {}
-      
-      shouldEndSession = True
-      
-      response = self.__buildResponse(outputSpeech, card, reprompt, shouldEndSession)
-      
-      return self.__buildFullResponse(version, sessionAttributes, response)
+   # TODO: add sessionAttributes as optional arg
+   def tellWithCard(self, outputSpeech, card): 
+      response = self.__buildResponse(outputSpeech=outputSpeech, card=card, shouldEndSession=True)
+      return self.__buildFullResponse(version=self.version, response=response)
  
-   def ask(self, version, sessionAttributes, outputSpeechText, repromptText): 
-      outputSpeech = {
-         'type' : 'PlainText',
-         'text' : outputSpeechText
-      }
-
-      card = {}
-
-      reprompt = {
-         'outputSpeech' : {
-            'type' : 'PlainText',
-            'text' : repromptText
-         }
-      }
-
-      shouldEndSession = False
-
-      response = self.__buildResponse(outputSpeech, card, reprompt, shouldEndSession)
-
-      return self.__buildFullResponse(version, sessionAttributes, response)
+   # TODO: add sessionAttributes as optional arg
+   def ask(self, outputSpeech, reprompt):
+      response = self.__buildResponse(outputSpeech=outputSpeech, reprompt=reprompt, shouldEndSession=False)
+      return self.__buildFullResponse(version=self.version, response=response)
  
-   def askWithCard(self, version, sessionAttributes, outputSpeechText, cardTitle, cardText, cardImages, repromptText):
-      outputSpeech = {
-         'type' : 'PlainText',
-         'text' : outputSpeechText
-      }
-
-      card = {
-         'type' : 'Standard',
-         'title' : cardTitle,
-         'text' : cardText,
-         'image' : cardImages
-      }
-
-
-      reprompt = {
-         'outputSpeech' : {
-            'type' : 'PlainText',
-            'text' : repromptText
-         }
-      }
-
-      shouldEndSession = False
-
-      response = self.__buildResponse(outputSpeech, card, reprompt, shouldEndSession)
-
-      return self.__buildFullResponse(version, sessionAttributes, response)
+   # TODO: add sessionAttributes as optional arg
+   def askWithCard(self, outputSpeech, reprompt, card):
+      response = self.__buildResponse(outputSpeech=outputSpeech, reprompt=reprompt, card=card, shouldEndSession=False)
+      return self.__buildFullResponse(version=self.version, response=response)
