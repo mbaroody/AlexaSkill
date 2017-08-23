@@ -1,5 +1,5 @@
 # Example Usage
-```
+```python
 from AlexaSkill import AlexaSkill
 
 class YourCustomSkill(AlexaSkill):
