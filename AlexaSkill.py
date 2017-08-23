@@ -15,10 +15,14 @@ class AlexaSkill(object):
    def processRequest(self):
       if self.session['new']:
          self.onSessionStarted()
-      #if 'accessToken' not in self.session['user']:
-      #   return self.onNotLinked()
+      if 'accessToken' not in self.session['user']:
+         return self.onNotLinked()
       if self.request['type'] == 'LaunchRequest':
          return self.onLaunch()
+      if self.request['type'] == 'IntentRequest' and \
+         (self.request['dialogState'] == 'STARTED' or \
+          self.request['dialogState'] == 'IN_PROGRESS'):
+          return self.finishDialog()
       if self.request['type'] == 'IntentRequest':
          return self.onIntent()
       if self.request['type'] == 'SessionEndedRequest':
@@ -31,6 +35,14 @@ class AlexaSkill(object):
    @abc.abstractmethod
    def onLaunch(self):
       pass 
+   
+   def finishDialog(self):
+      directives = []
+      directives.append({
+          'type' : 'Dialog.Delegate'
+      })
+      response = self.__buildResponse(directives=directives)
+      return self.__buildFullResponse(version=self.version, response=response)
 
    def onIntent(self):
       intent = self.request['intent']['name']
