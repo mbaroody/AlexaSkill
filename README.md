@@ -21,7 +21,7 @@ class YourCustomSkill(AlexaSkill):
         # implement this how you want
         return
 
-    def SomeIntentHandler() 
+    def SomeIntentHandler(self, intent) 
         outputSpeech = {
             'type' : 'PlainText'
         }
